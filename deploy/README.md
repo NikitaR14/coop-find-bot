@@ -73,6 +73,10 @@ PYTHONPATH=src /root/telegram-bot/venv-teamseek/bin/python -m unittest discover 
 /root/telegram-bot/venv-teamseek/bin/alembic current
 ```
 
+Ожидаемая текущая production-ревизия до обновления — `4350fedbbac0`. Её файл
+восстановлен в проекте, потому что исходный production-коммит миграции отсутствовал
+в переданном Git-репозитории.
+
 Сделать актуальную резервную копию PostgreSQL перед миграцией:
 
 ```bash

@@ -1,7 +1,7 @@
 """shared platform schema
 
 Revision ID: 9f24c02a7b11
-Revises: 5360c4b7989d
+Revises: 4350fedbbac0
 Create Date: 2026-08-12 13:15:00
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 
 revision: str = "9f24c02a7b11"
-down_revision: Union[str, Sequence[str], None] = "5360c4b7989d"
+down_revision: Union[str, Sequence[str], None] = "4350fedbbac0"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
