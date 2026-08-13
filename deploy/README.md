@@ -59,7 +59,8 @@ ENABLE_UTM_MIDDLEWARE=false
 chmod 600 /root/telegram-bot/releases/coopfind-20260813/.env
 ```
 
-В Discord Developer Portal для приложения должен быть включён `Server Members Intent`.
+Привилегированный `Server Members Intent` не требуется: членство проверяется запросом
+конкретного пользователя через Discord API.
 
 ## 3. Новое виртуальное окружение и проверка
 
