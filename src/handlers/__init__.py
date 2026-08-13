@@ -20,6 +20,7 @@ from handlers.search.search_lineage import router as search_lineage_router
 from handlers.clan.games.raven import router as raven_clan_router
 from handlers.clan.games.lineage import router as lineage_clan_router
 from handlers.autofit import router as autofit_router
+from handlers.shared_contacts import router as shared_contacts_router
 
 
 routers = [
@@ -38,6 +39,7 @@ routers = [
             search_raven_router, 
             search_lineage_router,
             search_profile, estimate_router,
+            shared_contacts_router,
             clan_router, edit_profile_router,
             edit_clan_router,
             ]

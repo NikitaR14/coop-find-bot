@@ -4,11 +4,17 @@ from aiogram.fsm.state import State, StatesGroup
 ### ФОРМА ДЛЯ АНКЕТЫ
 class ProfileForm(StatesGroup):
     nickname = State()
+    age = State()
     telegram_tag = State()
     gender = State()
     game = State()
 
     rank = State()
+
+    # AION 2
+    aion_server = State()
+    aion_faction = State()
+    aion_rank = State()
 
     # WOR | RSL
     num_rank = State()
@@ -16,7 +22,7 @@ class ProfileForm(StatesGroup):
     # WARCRAFT
     add_warcraft_mode = State()
     add_warcraft_rank = State()
-    
+
     # RAVEN
     raven_cluster = State()
     raven_server = State()
@@ -47,4 +53,3 @@ class ProfileForm(StatesGroup):
     photo = State()
     check_profile = State()
     is_active = State()
-    

@@ -15,6 +15,7 @@ from middlewares.utm_middleware import UtmTrackingMiddleware
 from aiogram.client.default import DefaultBotProperties
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from aiogram.enums import ParseMode
+from aiogram.client.session.aiohttp import AiohttpSession
 from google_sheet import GoogleSheetService
 from statistic import Statistic
 from repositories.user_repository import user_repository
@@ -44,7 +45,12 @@ async def handle_go_to_callback(callback: types.CallbackQuery, statistic: Statis
 
 # Run the bot
 async def main() -> None:
-    bot = Bot(token=settings.TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    session = AiohttpSession(proxy=settings.TELEGRAM_PROXY_URL) if settings.TELEGRAM_PROXY_URL else None
+    bot = Bot(
+        token=settings.TOKEN,
+        session=session,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+    )
 
     google_sheet = GoogleSheetService(credentials_path=settings.GOOGLE_SHEET_CREDENTIALS_PATH,
                                       sheet_id=settings.GOOGLE_SHEET_ID,

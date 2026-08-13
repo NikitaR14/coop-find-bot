@@ -26,6 +26,7 @@ if config.config_file_name is not None:
 from src.models.profile import Profile
 from src.models.clan import Clan
 from src.models.user import User
+from src.models.interaction import ContactRequest, ExperienceEvent, Review
 
 target_metadata = Base.metadata
 

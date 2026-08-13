@@ -1,0 +1,17 @@
+[Unit]
+Description=TeamSeek Discord Bot
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/telegram-bot/current
+EnvironmentFile=/root/telegram-bot/current/.env
+ExecStart=/root/telegram-bot/venv-teamseek/bin/python3 /root/telegram-bot/current/run_discord.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

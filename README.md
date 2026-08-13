@@ -1,0 +1,42 @@
+# TeamSeek / Coop Find Bot
+
+Один сервис поиска тиммейтов для Telegram и Discord с общей PostgreSQL-базой.
+
+## Что реализовано
+
+- общая выдача анкет Telegram и Discord с бейджем платформы;
+- создание, редактирование, просмотр, пауза и удаление Discord-анкеты;
+- сообщения и игровые приглашения между платформами через личные сообщения;
+- постоянные обращения, ответы `/reply` и напоминания об оценке после перезапуска;
+- единый рейтинг и опыт, без потери исторических Telegram-оценок;
+- поиск и создание кланов, включая межплатформенные заявки;
+- AION 2 в анкетах игроков и кланов, сервер и фракции «Элийцы»/«Асмодиане»;
+- отдельный лист Google Sheets для Discord-статистики;
+- доступ Discord-команд только участникам основного сервера GG.Store.
+
+## Локальный запуск
+
+Нужен Python 3.11–3.13 и PostgreSQL.
+
+```bash
+python3.13 -m venv venv
+venv/bin/pip install -r requirements.txt
+cp .env.example .env
+venv/bin/alembic upgrade head
+PYTHONPATH=src venv/bin/python src/bot.py
+venv/bin/python run_discord.py
+```
+
+Telegram и Discord используют одну строку подключения из `.env`, но запускаются отдельными процессами.
+
+## Discord Developer Portal
+
+В разделе Bot включить `Server Members Intent`. Для установки нужны scopes `bot` и `applications.commands`, разрешения: View Channels, Send Messages, Embed Links, Attach Files, Read Message History. Права администратора не требуются.
+
+## Продакшен
+
+Перед обновлением обязательно сохранить текущие серверные изменения и сделать резервную
+копию БД. Пошаговая схема релизного каталога, запуска двух systemd-служб и отката находится
+в `deploy/README.md`.
+
+Секреты и токены хранятся только в `.env`; файл исключён из Git.

@@ -149,6 +149,10 @@ async def autofit_game_handler(callback: CallbackQuery, state: FSMContext):
 
     try:
         profiles = await pr.get_profiles_by_game(game=game, user_id=callback.from_user.id)
+        # The legacy swipe-style autofit sends directly through aiogram.  The
+        # regular search supports both platforms; keep autofit Telegram-only
+        # until its whole state machine is moved to durable contact requests.
+        profiles = [profile for profile in profiles if profile.platform == "telegram"]
         if not profiles:
             await state.set_state(None)
             await callback.message.answer("По этой игре нет доступных профилей...", reply_markup=ReplyKeyboardRemove())

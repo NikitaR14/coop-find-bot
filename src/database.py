@@ -1,6 +1,9 @@
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from config import settings
+try:
+    from config import settings
+except ModuleNotFoundError:  # Alembic imports the package as ``src.database``.
+    from src.config import settings
 
 
 engine = create_async_engine(

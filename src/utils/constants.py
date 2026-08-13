@@ -4,6 +4,7 @@ GENDER_LIST = [
 ]
 
 GAME_LIST = {
+    "AION 2": "🪽AION 2🪽",
     "PUBG": "🎯 PUBG 🎯",
     "Dota 2": "⚔️ Dota 2 ⚔️",
     "Genshin Impact": "🌸 Genshin Impact 🌸",
@@ -29,8 +30,14 @@ GAME_LIST = {
     "Apex legends": "🔺Apex Legends🔺"
 }
 
+AION_2_FACTIONS = [
+    "Элийцы",
+    "Асмодиане",
+]
+
 PROFILE_SAMPLE = """
 <b>Ник</b>: {nickname}
+<b>Возраст</b>: {age}
 <b>Тег</b>: {telegram_tag}
 <b>Пол</b>: {gender}
 <b>Игры</b>: {game}
@@ -49,7 +56,9 @@ CLAN_SAMPLE = """
 
 FULL_PROFILE_SAMPLE = """
 <b>Ник:</b> {nickname}
+<b>Возраст:</b> {age}
 <b>Тег:</b> {telegram_tag}
+<b>Платформа:</b> {platform}
 <b>Пол:</b> {gender}
 <b>Уровень:</b> {level}⚡
 <b>Вежливость:</b> {polite}
@@ -73,6 +82,7 @@ CONNECT_LIST = [
 
 FIELDS_LIST = [
     "Никнейм",
+    "Возраст",
     "Телеграм тег",
     "Пол",
     "Игры",

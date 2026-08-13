@@ -4,10 +4,14 @@ from aiogram.fsm.state import State, StatesGroup
 class EditProfileForm(StatesGroup):
     choose_field = State()
     nickname = State()
+    age = State()
     telegram_tag = State()
     gender = State()
     games = State()
     rank = State()
+    aion_server = State()
+    aion_faction = State()
+    aion_rank = State()
     time = State()
     add_new_time = State()
     add_new_game = State()
@@ -16,7 +20,7 @@ class EditProfileForm(StatesGroup):
     add_warcraft_rank = State()
     add_new_warcraft_rank = State()
 
-        # RAVEN
+    # RAVEN
     raven_cluster = State()
     raven_server = State()
     raven_class = State()
@@ -42,6 +46,3 @@ class EditProfileForm(StatesGroup):
     is_active = State()
     clear = State()
     num_rank = State()
-
-
-

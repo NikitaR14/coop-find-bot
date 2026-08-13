@@ -1,14 +1,15 @@
 from aiogram.fsm.state import State, StatesGroup
 
 
-
 class SendMessageForm(StatesGroup):
     message = State()
     message_without_game = State()
 
+
 class GameForm(StatesGroup):
     search_type = State()
     game = State()
+
 
 class SearchForm(StatesGroup):
     game = State()
@@ -16,6 +17,11 @@ class SearchForm(StatesGroup):
     warcraft_rank = State()
     mode = State()
     rank = State()
+
+    # AION 2
+    aion_server = State()
+    aion_faction = State()
+    aion_rank = State()
 
     # RAVEN
     raven_cluster = State()
@@ -38,5 +44,11 @@ class SearchForm(StatesGroup):
     goal = State()
     num_rank = State()
 
+
 class ClanForm(StatesGroup):
     message = State()
+
+
+class ClanFilterForm(StatesGroup):
+    server = State()
+    faction = State()

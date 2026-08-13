@@ -27,7 +27,7 @@ async def get_profiles_kb(profiles: list[Profile],  game: str, page: int = 0, pe
         builder.add(
             InlineKeyboardButton(
                 text=f"{profile.nickname}\n{rating_text} ⭐{profile.experience // 100 + 1}".strip(),
-                callback_data=f"read_profile_other_{profile.user_id}" if not need_filter else f"read_profile_other_filter_{profile.user_id}"
+                callback_data=f"read_profile_otherid_{profile.id}" if not need_filter else f"read_profile_otheridfilter_{profile.id}"
             )
         )
     

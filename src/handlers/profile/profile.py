@@ -1,18 +1,20 @@
 from email.mime import message
 
 from aiogram import Router, Bot, F
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, InputMediaPhoto
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, InputMediaPhoto, FSInputFile
 from aiogram.filters.command import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from keyboards.profile_kb import *
 from utils.constants import *
 from repositories.profile_repository import profile_repository as repository
+from services.platform_repository import platform_repository
 from .create_profile import start_profile
 from statistic import Statistic
 from utils.profile_templates import get_profile_template, get_profile_template_no_rank
 import asyncio
 from html import escape
+from pathlib import Path
 
 
 router = Router()
@@ -61,11 +63,13 @@ async def read_profile(callback: CallbackQuery, state: FSMContext, statistic: St
     await callback.message.delete()
 
     callback_parts = callback.data.split("_")
-    user_id = int(callback_parts[-1])
+    reference_id = int(callback_parts[-1])
     data = await state.get_data()
 
-
-    if "filter" in callback_parts:
+    is_shared_profile = "otherid" in callback_parts or "otheridfilter" in callback_parts
+    if is_shared_profile:
+        type_user = "other"
+    elif "filter" in callback_parts:
         type_user = "other"
     else:
         type_user = callback_parts[-2]
@@ -79,13 +83,17 @@ async def read_profile(callback: CallbackQuery, state: FSMContext, statistic: St
             return 
     
 
-    if profile := await repository.get_profile(user_id=user_id):
+    if is_shared_profile:
+        profile = await platform_repository.get_profile_by_id(reference_id)
+    else:
+        profile = await repository.get_profile(user_id=reference_id)
+
+    if profile:
 
         if type_user == "other":
-            keyboard = await get_interaction_kb(user_id=user_id, game=game) if "filter" not in callback.data else await get_interaction_kb(user_id=user_id, game=game, need_filter=True)
+            keyboard = await get_interaction_kb(profile_id=profile.id, game=game, need_filter="filter" in callback.data)
         elif type_user == "invite":
-            user = await callback.bot.get_chat(user_id)
-            keyboard = await get_back_to_main_menu_from_invite(user_id)
+            keyboard = await get_back_to_main_menu_from_invite(reference_id)
         else:
             keyboard = await get_back_to_menu()
             
@@ -95,8 +103,11 @@ async def read_profile(callback: CallbackQuery, state: FSMContext, statistic: St
 
         if profile.photo:
             try:
+                photo = profile.photo
+                if profile.photo_origin in {"local", "discord"} and Path(profile.photo).is_file():
+                    photo = FSInputFile(profile.photo)
                 await callback.message.answer_photo(
-                    photo=profile.photo,
+                    photo=photo,
                     caption=profile_text,
                     reply_markup=keyboard)
                 await callback.answer()
@@ -120,18 +131,31 @@ async def show_gallery(callback: CallbackQuery):
     await callback.message.delete()
 
     parts = callback.data.split("_")
-    user_id = parts[-2]
+    reference_id = int(parts[-2])
     game = parts[-1]
 
-    nickname = (await repository.get_profile(user_id=int(user_id))).nickname
+    shared = "profile" in parts or "profilefilter" in parts
+    profile = (
+        await platform_repository.get_profile_by_id(reference_id)
+        if shared else await repository.get_profile(user_id=reference_id)
+    )
+    if not profile:
+        await callback.message.answer(TEXT_NO_PROFILE, reply_markup=await get_back_to_menu())
+        return
+    nickname = profile.nickname
     
     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(
         text="Назад",
-        callback_data=f"read_profile_other_{user_id}" if "filter" not in callback.data else f"read_profile_other_filter_{user_id}"
+        callback_data=(
+            f"read_profile_otherid_{profile.id}"
+            if "filter" not in callback.data
+            else f"read_profile_otheridfilter_{profile.id}"
+        )
     )]])
 
 
-    if games := await repository.get_games_by_user_id(user_id=int(user_id)):
+    games = profile.games if shared else await repository.get_games_by_user_id(user_id=reference_id)
+    if games:
         games = {game.name: game for game in games}
         if game in games:
             if games[game].gallery:

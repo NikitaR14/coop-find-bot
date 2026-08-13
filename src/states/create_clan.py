@@ -11,7 +11,13 @@ class ClanForm(StatesGroup):
 
     # LINEAGE
     lineage_server = State()
-    
+
+    # AION 2
+    aion_server = State()
+    aion_faction = State()
+    mmo_server = State()
+    mmo_faction = State()
+
     description = State()
     demands = State()
     photo = State()

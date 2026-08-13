@@ -7,12 +7,14 @@ from html import escape
 async def get_main_template(profile: Profile, user_rank: str = "") -> str:
     return FULL_PROFILE_SAMPLE.format(
             nickname=escape(profile.nickname),
+            age=escape(str(profile.age or "Не указан")),
             telegram_tag= escape("@" + profile.telegram_tag if profile.telegram_tag else "Нет"),
+            platform="🔵 Discord" if profile.platform == "discord" else "✈️ Telegram",
             gender=escape(profile.gender if profile.gender else "Нет"),
             level=escape(str(profile.experience // 100 + 1)),
-            polite=escape(str(round(profile.polite, 1)) + "⭐" if profile.teammate_ids else "Нет оценок"),
-            skill=escape(str(round(profile.skill, 1)) + "⭐" if profile.teammate_ids else "Нет оценок"),
-            team_game=escape(str(round(profile.team_game, 1)) + "⭐" if profile.teammate_ids else "Нет оценок"), 
+            polite=escape(str(round(profile.polite, 1)) + "⭐" if profile.polite is not None else "Нет оценок"),
+            skill=escape(str(round(profile.skill, 1)) + "⭐" if profile.skill is not None else "Нет оценок"),
+            team_game=escape(str(round(profile.team_game, 1)) + "⭐" if profile.team_game is not None else "Нет оценок"),
             games=escape(profile.games_str),
             rank=user_rank,
             add_info=PROFILE_ADD_INFO.format(time=", ".join(profile.convenient_time) if profile.convenient_time else "Не указано", 
@@ -36,24 +38,30 @@ async def get_warcraft_profile_template(profile: Profile) -> str:
 
 
 async def get_other_game_profile_template(profile: Profile, game: str) -> str:
-    games = {game.name: game.rank for game in profile.games}
+    games = {item.name: item for item in profile.games}
 
-    if games.get(game, False):
-        user_rank = f"\n<b>Ранг:</b> {escape(games[game])}"
+    if games.get(game) and games[game].rank:
+        user_rank = f"\n<b>Ранг:</b> {escape(games[game].rank)}"
     else:
         user_rank = f"\n<b>Ранг:</b> Не указан"
+    if games.get(game) and games[game].server:
+        user_rank += f"\n<b>Сервер:</b> {escape(games[game].server)}"
+    if games.get(game) and games[game].faction:
+        user_rank += f"\n<b>Фракция:</b> {escape(games[game].faction)}"
 
     return await get_main_template(profile, user_rank)
 
 async def get_raven_main_template(profile: Profile, user_rank: str = "", add_info: str = "") -> str:
     return FULL_PROFILE_SAMPLE.format(
             nickname=escape(profile.nickname),
+            age=escape(str(profile.age or "Не указан")),
             telegram_tag= escape("@" + profile.telegram_tag if profile.telegram_tag else "Нет"),
+            platform="🔵 Discord" if profile.platform == "discord" else "✈️ Telegram",
             gender=escape(profile.gender if profile.gender else "Нет"),
             level=escape(str(profile.experience // 100 + 1)),
-            polite=escape(str(round(profile.polite, 1)) + "⭐" if profile.teammate_ids else "Нет оценок"),
-            skill=escape(str(round(profile.skill, 1)) + "⭐" if profile.teammate_ids else "Нет оценок"),
-            team_game=escape(str(round(profile.team_game, 1)) + "⭐" if profile.teammate_ids else "Нет оценок"), 
+            polite=escape(str(round(profile.polite, 1)) + "⭐" if profile.polite is not None else "Нет оценок"),
+            skill=escape(str(round(profile.skill, 1)) + "⭐" if profile.skill is not None else "Нет оценок"),
+            team_game=escape(str(round(profile.team_game, 1)) + "⭐" if profile.team_game is not None else "Нет оценок"),
             games=escape(profile.games_str),
             rank=user_rank,
             add_info=add_info

@@ -1,5 +1,8 @@
 from sqlalchemy.orm import Mapped, mapped_column
-from database import Base
+try:
+    from database import Base
+except ModuleNotFoundError:
+    from src.database import Base
 from sqlalchemy import BigInteger, DateTime, func, String
 from datetime import datetime
 
