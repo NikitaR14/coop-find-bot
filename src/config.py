@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     GOOGLE_SHEET_CREDENTIALS_PATH: str
     GOOGLE_SHEET_ID: str
     GOOGLE_SHEET_WORKSHEET_NAME: str
-    PRIVATE_PHOTO_GROUP_ID: int
+    PRIVATE_PHOTO_GROUP_ID: int = 0
 
     # Discord is an optional second transport.  Keeping defaults here lets the
     # Telegram service continue to start before Discord is configured.
