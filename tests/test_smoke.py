@@ -130,6 +130,10 @@ class SmokeTests(unittest.TestCase):
                 ClanSearchCriteriaView(1, "AION 2"),
             ):
                 self.assertLessEqual(len(view.children), 25)
+                for component in view.to_components():
+                    for item in component["components"]:
+                        for option in item.get("options", []):
+                            self.assertTrue(option["value"])
 
         asyncio.run(check())
 

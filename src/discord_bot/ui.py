@@ -581,12 +581,12 @@ class GoalSearchSelect(discord.ui.Select):
     def __init__(self):
         super().__init__(
             placeholder="Цель поиска (необязательно)",
-            options=[discord.SelectOption(label="Любая цель", value="")]
+            options=[discord.SelectOption(label="Любая цель", value="any")]
             + [discord.SelectOption(label=value, value=value) for value in GOALS_LIST],
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        self.view.goal = self.values[0] or None
+        self.view.goal = None if self.values[0] == "any" else self.values[0]
         await interaction.response.defer()
 
 
@@ -594,7 +594,7 @@ class AionSearchFactionSelect(discord.ui.Select):
     def __init__(self):
         super().__init__(
             placeholder="Фракция AION 2 (необязательно)",
-            options=[discord.SelectOption(label="Любая фракция", value="")]
+            options=[discord.SelectOption(label="Любая фракция", value="any")]
             + [
                 discord.SelectOption(label=value, value=value)
                 for value in AION_2_FACTIONS
@@ -602,7 +602,7 @@ class AionSearchFactionSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        self.view.faction = self.values[0] or None
+        self.view.faction = None if self.values[0] == "any" else self.values[0]
         await interaction.response.defer()
 
 
@@ -1494,7 +1494,7 @@ class ClanSearchFactionSelect(discord.ui.Select):
     def __init__(self):
         super().__init__(
             placeholder="Фракция (необязательно)",
-            options=[discord.SelectOption(label="Любая фракция", value="")]
+            options=[discord.SelectOption(label="Любая фракция", value="any")]
             + [
                 discord.SelectOption(label=value, value=value)
                 for value in AION_2_FACTIONS
@@ -1502,7 +1502,7 @@ class ClanSearchFactionSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction) -> None:
-        self.view.faction = self.values[0] or None
+        self.view.faction = None if self.values[0] == "any" else self.values[0]
         await interaction.response.defer()
 
 
