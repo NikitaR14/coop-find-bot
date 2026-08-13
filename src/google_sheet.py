@@ -33,7 +33,10 @@ class GoogleSheetService:
         """Поиск строки по нескольким колонкам. criteria = {col_index: value}"""
         all_values = self.worksheet.get_all_values()
         for i, row in enumerate(all_values):
-            if all(str(row[col]) == str(val) for col, val in criteria.items() if len(row) >= col):
+            if all(
+                len(row) > col and str(row[col]) == str(val)
+                for col, val in criteria.items()
+            ):
                 return i + 1
         return None
 

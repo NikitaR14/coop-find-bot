@@ -21,6 +21,24 @@ for key, value in DEFAULT_ENV.items():
 
 
 class SmokeTests(unittest.TestCase):
+    def test_google_sheet_short_rows_do_not_match_or_crash(self):
+        from google_sheet import GoogleSheetService
+
+        class Worksheet:
+            @staticmethod
+            def get_all_values():
+                return [["8334693279"], ["8334693279", "name", "campaign"]]
+
+        service = GoogleSheetService.__new__(GoogleSheetService)
+        service.worksheet = Worksheet()
+
+        self.assertEqual(
+            service.get_row_index_multi({0: "8334693279", 2: "campaign"}), 2
+        )
+        self.assertIsNone(
+            service.get_row_index_multi({0: "8334693279", 3: "missing"})
+        )
+
     def test_telegram_routers_load(self):
         from handlers import routers
 
