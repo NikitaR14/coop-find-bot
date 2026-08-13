@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass, field
 
 import discord
@@ -366,8 +367,10 @@ class ProfileConfirmView(OwnedView):
             convenient_time=self.draft.convenient_time,
             contact_tag=str(interaction.user),
         )
-        await discord_statistics.record(
-            interaction.user.id, str(interaction.user), "filled_profile"
+        asyncio.create_task(
+            discord_statistics.record(
+                interaction.user.id, str(interaction.user), "filled_profile"
+            )
         )
         await interaction.response.edit_message(
             content="Анкета создана. Разместить её в поиске?",
@@ -486,8 +489,10 @@ class MenuView(OwnedView):
     async def website(
         self, interaction: discord.Interaction, _: discord.ui.Button
     ) -> None:
-        await discord_statistics.record(
-            interaction.user.id, str(interaction.user), "website"
+        asyncio.create_task(
+            discord_statistics.record(
+                interaction.user.id, str(interaction.user), "website"
+            )
         )
         await interaction.response.send_message(
             f"Перейти на сайт: {settings.WEBSITE_URL}", ephemeral=True
@@ -532,8 +537,10 @@ class GameSearchSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         game = self.values[0]
-        await discord_statistics.record(
-            interaction.user.id, str(interaction.user), "start_search"
+        asyncio.create_task(
+            discord_statistics.record(
+                interaction.user.id, str(interaction.user), "start_search"
+            )
         )
         if self.filtered:
             await interaction.response.edit_message(
@@ -692,8 +699,10 @@ class ProfileResultSelect(discord.ui.Select):
                 "Анкета больше недоступна.", ephemeral=True
             )
             return
-        await discord_statistics.record(
-            interaction.user.id, str(interaction.user), "open_profile"
+        asyncio.create_task(
+            discord_statistics.record(
+                interaction.user.id, str(interaction.user), "open_profile"
+            )
         )
         view = self.view
         embed = profile_embed(profile, view.game)
@@ -824,8 +833,10 @@ async def send_contact(
         await interaction.response.send_message(
             "Сообщение отправлено. Ответ придёт в личные сообщения.", ephemeral=True
         )
-        await discord_statistics.record(
-            interaction.user.id, str(interaction.user), "invite_game"
+        asyncio.create_task(
+            discord_statistics.record(
+                interaction.user.id, str(interaction.user), "invite_game"
+            )
         )
     else:
         await platform_repository.mark_contact_failed(request.id)
