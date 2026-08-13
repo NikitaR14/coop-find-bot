@@ -8,7 +8,7 @@
 На сервере:
 
 ```bash
-mkdir -p /root/telegram-bot/releases/coopfind-20260812
+mkdir -p /root/telegram-bot/releases/coopfind-20260813
 ```
 
 На Mac:
@@ -19,7 +19,7 @@ PYTHONPATH=src .venv/bin/python -m unittest discover -s tests -v
 rsync -az --delete \
   --exclude '.git' --exclude '.venv' --exclude '.env' \
   --exclude '.DS_Store' --exclude 'var' \
-  ./ root@176.124.218.55:/root/telegram-bot/releases/coopfind-20260812/
+  ./ root@176.124.218.55:/root/telegram-bot/releases/coopfind-20260813/
 ```
 
 `--delete` применяется только к новому каталогу конкретного релиза. Рабочий каталог
@@ -30,14 +30,14 @@ Telegram-бота команда не затрагивает.
 На сервере:
 
 ```bash
-mkdir -p /root/telegram-bot/backups/20260812
+mkdir -p /root/telegram-bot/backups/20260813
 cd /root/telegram-bot/coop-find-bot
-git diff > /root/telegram-bot/backups/20260812/server-changes.patch
-cp -a dump.sql /root/telegram-bot/backups/20260812/dump-before-teamseek.sql
+git diff --binary > /root/telegram-bot/backups/20260813/server-changes.patch
+cp -a dump.sql /root/telegram-bot/backups/20260813/dump-before-teamseek.sql
 
-install -m 600 .env /root/telegram-bot/releases/coopfind-20260812/.env
+install -m 600 .env /root/telegram-bot/releases/coopfind-20260813/.env
 mkdir -p /root/telegram-bot/media
-nano /root/telegram-bot/releases/coopfind-20260812/.env
+nano /root/telegram-bot/releases/coopfind-20260813/.env
 ```
 
 В `.env` сохранить все существующие значения и добавить или заменить только эти строки:
@@ -49,12 +49,14 @@ PRIMARY_GUILD_ID=1414672367476805794
 DISCORD_STATS_WORKSHEET_NAME=Discord
 MEDIA_DIR=/root/telegram-bot/media
 WEBSITE_URL=https://gg.markets/s-TeamSeek
+TELEGRAM_PROXY_URL=socks5://ТЕКУЩИЙ_АДРЕС_ПРОКСИ
+ENABLE_UTM_MIDDLEWARE=false
 ```
 
 Права на секрет:
 
 ```bash
-chmod 600 /root/telegram-bot/releases/coopfind-20260812/.env
+chmod 600 /root/telegram-bot/releases/coopfind-20260813/.env
 ```
 
 В Discord Developer Portal для приложения должен быть включён `Server Members Intent`.
@@ -64,9 +66,9 @@ chmod 600 /root/telegram-bot/releases/coopfind-20260812/.env
 ```bash
 python3 -m venv /root/telegram-bot/venv-teamseek
 /root/telegram-bot/venv-teamseek/bin/pip install --upgrade pip
-/root/telegram-bot/venv-teamseek/bin/pip install -r /root/telegram-bot/releases/coopfind-20260812/requirements.txt
+/root/telegram-bot/venv-teamseek/bin/pip install -r /root/telegram-bot/releases/coopfind-20260813/requirements.txt
 
-cd /root/telegram-bot/releases/coopfind-20260812
+cd /root/telegram-bot/releases/coopfind-20260813
 PYTHONPATH=src /root/telegram-bot/venv-teamseek/bin/python -m unittest discover -s tests -v
 /root/telegram-bot/venv-teamseek/bin/alembic current
 ```
@@ -74,13 +76,13 @@ PYTHONPATH=src /root/telegram-bot/venv-teamseek/bin/python -m unittest discover 
 Сделать актуальную резервную копию PostgreSQL перед миграцией:
 
 ```bash
-cd /root/telegram-bot/releases/coopfind-20260812
+cd /root/telegram-bot/releases/coopfind-20260813
 set -a
 source .env
 set +a
 PGPASSWORD="$DB_PASSWORD" pg_dump \
   -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
-  -Fc -f /root/telegram-bot/backups/20260812/database-before-teamseek.dump
+  -Fc -f /root/telegram-bot/backups/20260813/database-before-teamseek.dump
 ```
 
 ## 4. Миграция и запуск двух служб
@@ -90,11 +92,11 @@ PGPASSWORD="$DB_PASSWORD" pg_dump \
 
 ```bash
 systemctl stop telegram-bot.service
-cd /root/telegram-bot/releases/coopfind-20260812
+cd /root/telegram-bot/releases/coopfind-20260813
 /root/telegram-bot/venv-teamseek/bin/alembic upgrade head
 /root/telegram-bot/venv-teamseek/bin/alembic current
 
-ln -s /root/telegram-bot/releases/coopfind-20260812 /root/telegram-bot/current
+ln -s /root/telegram-bot/releases/coopfind-20260813 /root/telegram-bot/current
 install -d /etc/systemd/system/telegram-bot.service.d
 install -m 644 deploy/telegram-bot.override.conf \
   /etc/systemd/system/telegram-bot.service.d/teamseek.conf

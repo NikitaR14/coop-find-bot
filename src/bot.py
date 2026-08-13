@@ -88,8 +88,9 @@ async def main() -> None:
     dp.message.middleware(inactive_middleware)
     dp.callback_query.middleware(inactive_middleware)
 
-    dp.message.middleware(utm_middleware)
-    dp.callback_query.middleware(utm_middleware)
+    if settings.ENABLE_UTM_MIDDLEWARE:
+        dp.message.middleware(utm_middleware)
+        dp.callback_query.middleware(utm_middleware)
 
     scheduler.start()
     

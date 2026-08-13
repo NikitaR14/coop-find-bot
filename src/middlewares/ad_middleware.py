@@ -24,8 +24,12 @@ class AdvertismentMiddleware(BaseMiddleware):
                         pop_up = pop_up + 1 if pop_up != 10 else pop_up - 1
                     ad = POP_UPS[pop_up]
                     kb = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Перейти", callback_data=f"go_to_{ad['link']}")]])
-                    #await event.bot.send_photo(chat_id=event.from_user.id, photo=ad["pic"], caption=ad["text"], reply_markup=kb)
-                    await event.bot.send_message(chat_id=event.from_user.id, text=ad["text"], reply_markup=kb, disable_web_page_preview=True)
+                    await event.bot.send_photo(
+                        chat_id=event.from_user.id,
+                        photo=ad["pic"],
+                        caption=ad["text"],
+                        reply_markup=kb,
+                    )
                     await user_repository.update_clicks(user_id=event.from_user.id, clicks=0)
                     await user_repository.update_last_pop_up(user_id=event.from_user.id, pop_up=pop_up)
                 else:

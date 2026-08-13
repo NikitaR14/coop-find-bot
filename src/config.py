@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     DISCORD_STATS_WORKSHEET_NAME: str = "Discord"
     MEDIA_DIR: str = "var/media"
     TELEGRAM_PROXY_URL: str | None = None
+    ENABLE_UTM_MIDDLEWARE: bool = True
     WEBSITE_URL: str = "https://gg.markets/s-TeamSeek"
 
     model_config = SettingsConfigDict(
