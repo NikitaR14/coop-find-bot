@@ -57,12 +57,16 @@ class TeamSeekBot(commands.Bot):
                     )
                 )
         self.reminder_worker.start()
-        # Guild sync gives instant command updates during development. Global
-        # sync keeps the bot installable on other servers as requested.
-        if settings.TEST_GUILD_ID or settings.PRIMARY_GUILD_ID:
-            guild_id = settings.TEST_GUILD_ID or settings.PRIMARY_GUILD_ID
-            guild = discord.Object(id=guild_id)
+        # Guild sync gives instant command updates only in an explicit test
+        # guild. Production commands stay global so the bot remains installable
+        # on other servers without duplicate entries in the primary guild.
+        if settings.TEST_GUILD_ID:
+            guild = discord.Object(id=settings.TEST_GUILD_ID)
             self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
+        elif settings.PRIMARY_GUILD_ID:
+            guild = discord.Object(id=settings.PRIMARY_GUILD_ID)
+            self.tree.clear_commands(guild=guild)
             await self.tree.sync(guild=guild)
         await self.tree.sync()
         self.synced = True
