@@ -1,0 +1,18 @@
+[Unit]
+Description=TeamSeek Discord Bot
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/teamseek/current
+EnvironmentFile=/opt/teamseek/current/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/teamseek/venv/bin/python3 /opt/teamseek/current/run_discord.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
