@@ -5,3 +5,17 @@ __pycache__
 *.json
 var/
 .DS_Store
+
+# Local specifications and editor settings
+/docs/
+/.idea/
+
+# Runtime logs and generated development artifacts
+*.log
+/src/log.txt
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.py[cod]
+.coverage
+htmlcov/
