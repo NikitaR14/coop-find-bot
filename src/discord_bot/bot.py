@@ -2,6 +2,8 @@ import asyncio
 import logging
 
 import discord
+
+from .messages import send_temporary, followup_temporary, temporary_messages
 from discord import app_commands
 from discord.ext import commands, tasks
 
@@ -25,10 +27,15 @@ except ModuleNotFoundError:
 from .formatting import platform_badge, profile_embed
 from .ui import (
     ClanHubView,
+    ClanAvatarModal,
+    save_clan_avatar,
     GameSearchView,
     MenuView,
+    MyProfileView,
     ProfileBasicsModal,
     ProfileDeleteConfirmView,
+    PublicPanelView,
+    LegacyPublicPanelView,
     RatingModal,
     RatingPromptView,
 )
@@ -44,6 +51,8 @@ class TeamSeekBot(commands.Bot):
         self.synced = False
 
     async def setup_hook(self) -> None:
+        self.add_view(PublicPanelView())
+        self.add_view(LegacyPublicPanelView())
         for request in await platform_repository.active_rating_requests():
             sender = await platform_repository.get_profile_by_id(
                 request.sender_profile_id
@@ -80,6 +89,7 @@ class TeamSeekBot(commands.Bot):
 
     async def close(self) -> None:
         self.reminder_worker.cancel()
+        await temporary_messages.close()
         await super().close()
 
     @tasks.loop(seconds=60)
@@ -143,14 +153,14 @@ async def notify_level(user: discord.User | discord.Member, level: int) -> None:
 
 async def primary_member(interaction: discord.Interaction) -> bool:
     if not settings.PRIMARY_GUILD_ID:
-        await interaction.response.send_message(
-            "Основной Discord-сервер ещё не настроен.", ephemeral=True
+        await send_temporary(
+            interaction, "Основной Discord-сервер ещё не настроен.", ephemeral=True
         )
         return False
     guild = bot.get_guild(settings.PRIMARY_GUILD_ID)
     if guild is None:
-        await interaction.response.send_message(
-            "Бот не подключён к основному серверу.", ephemeral=True
+        await send_temporary(
+            interaction, "Бот не подключён к основному серверу.", ephemeral=True
         )
         return False
     try:
@@ -160,13 +170,15 @@ async def primary_member(interaction: discord.Interaction) -> bool:
     except discord.NotFound:
         member = None
     except discord.HTTPException:
-        await interaction.response.send_message(
+        await send_temporary(
+            interaction,
             "Не удалось проверить членство на сервере. Попробуйте ещё раз.",
             ephemeral=True,
         )
         return False
     if member is None:
-        await interaction.response.send_message(
+        await send_temporary(
+            interaction,
             "Функции TeamSeek доступны участникам основного сервера GG.Store.",
             ephemeral=True,
         )
@@ -191,11 +203,104 @@ async def primary_member(interaction: discord.Interaction) -> bool:
 async def menu(interaction: discord.Interaction) -> None:
     if not await primary_member(interaction):
         return
-    await interaction.response.send_message(
+    profile = await platform_repository.get_profile("discord", interaction.user.id)
+    await send_temporary(
+        interaction,
         "А кто это у нас такой красивый и до сих пор играет сам? Давай исправим это 🔍",
-        view=MenuView(interaction.user.id),
+        view=MenuView(interaction.user.id, has_profile=profile is not None),
         ephemeral=True,
     )
+
+
+@bot.tree.command(name="panel", description="Опубликовать панель TeamSeek в канале")
+@app_commands.default_permissions(manage_guild=True)
+@app_commands.guild_only()
+@app_commands.describe(message_id="ID существующей панели в этом канале для обновления")
+async def panel(
+    interaction: discord.Interaction, message_id: str | None = None
+) -> None:
+    permissions = getattr(interaction.user, "guild_permissions", None)
+    if not permissions or not permissions.manage_guild:
+        await send_temporary(
+            interaction,
+            "Для публикации панели нужно право «Управлять сервером».",
+            ephemeral=True,
+        )
+        return
+    if not await primary_member(interaction):
+        return
+    if interaction.channel is None or not hasattr(interaction.channel, "send"):
+        await send_temporary(
+            interaction, "Не удалось определить канал для публикации.", ephemeral=True
+        )
+        return
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    if message_id is not None:
+        if (
+            not 1 <= len(message_id) <= 20
+            or not message_id.isascii()
+            or not message_id.isdigit()
+            or not 0 < int(message_id) < 2**64
+        ):
+            await followup_temporary(
+                interaction, "Укажите корректный ID сообщения панели.", ephemeral=True
+            )
+            return
+        try:
+            message = await interaction.channel.fetch_message(int(message_id))
+
+            # Recognise both original action rows and the newer V2 container.
+            def panel_ids(components):
+                for component in components:
+                    custom_id = getattr(component, "custom_id", None)
+                    if custom_id:
+                        yield custom_id
+                    yield from panel_ids(getattr(component, "children", ()))
+
+            ids = set(panel_ids(message.components))
+            if message.author.id != interaction.client.user.id or not ids.intersection(
+                PublicPanelView.CUSTOM_IDS.values()
+            ):
+                await followup_temporary(
+                    interaction,
+                    "Это сообщение не является панелью TeamSeek этого бота.",
+                    ephemeral=True,
+                )
+                return
+            await message.edit(
+                content=None, embeds=[], attachments=[], view=PublicPanelView()
+            )
+        except discord.HTTPException as exc:
+            await followup_temporary(
+                interaction, f"Не удалось обновить панель: {exc}", ephemeral=True
+            )
+            return
+        await followup_temporary(
+            interaction,
+            "Панель TeamSeek обновлена. Закрепление сохранено.",
+            ephemeral=True,
+        )
+        return
+    try:
+        message = await interaction.channel.send(view=PublicPanelView())
+    except discord.HTTPException as exc:
+        await followup_temporary(
+            interaction, f"Не удалось опубликовать панель: {exc}", ephemeral=True
+        )
+        return
+    try:
+        await message.pin(reason=f"Панель TeamSeek опубликована {interaction.user}")
+    except discord.HTTPException:
+        await followup_temporary(
+            interaction,
+            "Панель опубликована, но закрепить её автоматически не удалось. "
+            "Пожалуйста, закрепите сообщение вручную.",
+            ephemeral=True,
+        )
+    else:
+        await followup_temporary(
+            interaction, "Панель TeamSeek опубликована и закреплена.", ephemeral=True
+        )
 
 
 @bot.tree.command(name="form", description="Создать или заполнить заново анкету игрока")
@@ -216,8 +321,8 @@ async def edit(interaction: discord.Interaction) -> None:
         return
     profile = await platform_repository.get_profile("discord", interaction.user.id)
     if not profile:
-        await interaction.response.send_message(
-            "Сначала создайте анкету командой `/form`.", ephemeral=True
+        await send_temporary(
+            interaction, "Сначала создайте анкету командой `/form`.", ephemeral=True
         )
         return
     await interaction.response.send_modal(
@@ -232,8 +337,8 @@ async def profile(interaction: discord.Interaction) -> None:
         return
     current = await platform_repository.get_profile("discord", interaction.user.id)
     if not current:
-        await interaction.response.send_message(
-            "Анкета ещё не создана. Используйте `/form`.", ephemeral=True
+        await send_temporary(
+            interaction, "Анкета ещё не создана. Используйте `/form`.", ephemeral=True
         )
         return
     embed = profile_embed(current)
@@ -241,9 +346,20 @@ async def profile(interaction: discord.Interaction) -> None:
     if photo_path:
         file = discord.File(photo_path, filename=photo_path.name)
         embed.set_image(url=f"attachment://{photo_path.name}")
-        await interaction.response.send_message(embed=embed, file=file, ephemeral=True)
+        await send_temporary(
+            interaction,
+            embed=embed,
+            file=file,
+            view=MyProfileView(interaction.user.id, current),
+            ephemeral=True,
+        )
     else:
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        await send_temporary(
+            interaction,
+            embed=embed,
+            view=MyProfileView(interaction.user.id, current),
+            ephemeral=True,
+        )
 
 
 @bot.tree.command(name="search", description="Поиск тиммейтов по игре")
@@ -252,11 +368,12 @@ async def search(interaction: discord.Interaction) -> None:
     if not await primary_member(interaction):
         return
     if not await platform_repository.get_profile("discord", interaction.user.id):
-        await interaction.response.send_message(
-            "Сначала создайте анкету командой `/form`.", ephemeral=True
+        await send_temporary(
+            interaction, "Сначала создайте анкету командой `/form`.", ephemeral=True
         )
         return
-    await interaction.response.send_message(
+    await send_temporary(
+        interaction,
         "Выберите игру:",
         view=GameSearchView(interaction.user.id, filtered=True),
         ephemeral=True,
@@ -267,11 +384,12 @@ async def show_search(interaction: discord.Interaction, *, filtered: bool) -> No
     if not await primary_member(interaction):
         return
     if not await platform_repository.get_profile("discord", interaction.user.id):
-        await interaction.response.send_message(
-            "Сначала создайте анкету командой `/form`.", ephemeral=True
+        await send_temporary(
+            interaction, "Сначала создайте анкету командой `/form`.", ephemeral=True
         )
         return
-    await interaction.response.send_message(
+    await send_temporary(
+        interaction,
         "Выберите игру:",
         view=GameSearchView(interaction.user.id, filtered=filtered),
         ephemeral=True,
@@ -290,12 +408,15 @@ async def clan(interaction: discord.Interaction) -> None:
     if not await primary_member(interaction):
         return
     if not await platform_repository.get_profile("discord", interaction.user.id):
-        await interaction.response.send_message(
-            "Сначала создайте анкету командой `/form`.", ephemeral=True
+        await send_temporary(
+            interaction, "Сначала создайте анкету командой `/form`.", ephemeral=True
         )
         return
-    await interaction.response.send_message(
-        "Раздел кланов:", view=ClanHubView(interaction.user.id), ephemeral=True
+    await send_temporary(
+        interaction,
+        "Раздел кланов:",
+        view=ClanHubView(interaction.user.id),
+        ephemeral=True,
     )
 
 
@@ -306,14 +427,14 @@ async def photo(interaction: discord.Interaction, upload: discord.Attachment) ->
     if not await primary_member(interaction):
         return
     if not await platform_repository.get_profile("discord", interaction.user.id):
-        await interaction.response.send_message(
-            "Сначала создайте анкету командой `/form`.", ephemeral=True
+        await send_temporary(
+            interaction, "Сначала создайте анкету командой `/form`.", ephemeral=True
         )
         return
     content_type = upload.content_type or ""
     if content_type not in ALLOWED_IMAGE_TYPES:
-        await interaction.response.send_message(
-            "Загрузите изображение JPG, PNG, WEBP или GIF.", ephemeral=True
+        await send_temporary(
+            interaction, "Загрузите изображение JPG, PNG, WEBP или GIF.", ephemeral=True
         )
         return
     await interaction.response.defer(ephemeral=True, thinking=True)
@@ -322,12 +443,12 @@ async def photo(interaction: discord.Interaction, upload: discord.Attachment) ->
             await upload.read(), content_type, upload.filename
         )
     except ValueError as exc:
-        await interaction.followup.send(str(exc), ephemeral=True)
+        await followup_temporary(interaction, str(exc), ephemeral=True)
         return
     await platform_repository.update_photo(
         "discord", interaction.user.id, reference, "local"
     )
-    await interaction.followup.send("Фото анкеты обновлено.", ephemeral=True)
+    await followup_temporary(interaction, "Фото анкеты обновлено.", ephemeral=True)
 
 
 @bot.tree.command(name="clan_photo", description="Добавить или заменить аватар клана")
@@ -336,34 +457,16 @@ async def photo(interaction: discord.Interaction, upload: discord.Attachment) ->
 )
 @app_commands.guild_only()
 async def clan_photo(
-    interaction: discord.Interaction, clan_id: int, upload: discord.Attachment
+    interaction: discord.Interaction,
+    clan_id: int,
+    upload: discord.Attachment | None = None,
 ) -> None:
     if not await primary_member(interaction):
         return
-    clan = await platform_repository.get_clan_by_id(clan_id)
-    if not clan or clan.platform != "discord" or clan.user_id != interaction.user.id:
-        await interaction.response.send_message(
-            "Ваша анкета клана не найдена.", ephemeral=True
-        )
+    if upload is None:
+        await interaction.response.send_modal(ClanAvatarModal(clan_id))
         return
-    content_type = upload.content_type or ""
-    if content_type not in ALLOWED_IMAGE_TYPES:
-        await interaction.response.send_message(
-            "Загрузите изображение JPG, PNG, WEBP или GIF.", ephemeral=True
-        )
-        return
-    await interaction.response.defer(ephemeral=True, thinking=True)
-    try:
-        reference = await store_image(
-            await upload.read(), content_type, upload.filename
-        )
-    except ValueError as exc:
-        await interaction.followup.send(str(exc), ephemeral=True)
-        return
-    await platform_repository.update_clan_photo(
-        clan_id, "discord", interaction.user.id, reference, "local"
-    )
-    await interaction.followup.send("Аватар клана обновлён.", ephemeral=True)
+    await save_clan_avatar(interaction, clan_id, upload)
 
 
 @bot.tree.command(name="pause", description="Снять анкету с поиска или вернуть её")
@@ -373,7 +476,8 @@ async def pause(interaction: discord.Interaction, active: bool) -> None:
     if not await primary_member(interaction):
         return
     await platform_repository.set_profile_active("discord", interaction.user.id, active)
-    await interaction.response.send_message(
+    await send_temporary(
+        interaction,
         "Анкета размещена в поиске." if active else "Анкета снята с поиска.",
         ephemeral=True,
     )
@@ -388,9 +492,10 @@ async def delete_profile(interaction: discord.Interaction) -> None:
         return
     current = await platform_repository.get_profile("discord", interaction.user.id)
     if not current:
-        await interaction.response.send_message("У вас нет анкеты.", ephemeral=True)
+        await send_temporary(interaction, "У вас нет анкеты.", ephemeral=True)
         return
-    await interaction.response.send_message(
+    await send_temporary(
+        interaction,
         "Точно удалить анкету и связанные данные?",
         view=ProfileDeleteConfirmView(interaction.user.id),
         ephemeral=True,
@@ -410,21 +515,22 @@ async def reply(
     current = await platform_repository.get_profile("discord", interaction.user.id)
     request = await platform_repository.get_contact_request(request_id)
     if not current or not request or request.target_profile_id != current.id:
-        await interaction.response.send_message(
-            "Сообщение не найдено или принадлежит другому пользователю.", ephemeral=True
+        await send_temporary(
+            interaction,
+            "Сообщение не найдено или принадлежит другому пользователю.",
+            ephemeral=True,
         )
         return
     sender = await platform_repository.get_profile_by_id(request.sender_profile_id)
     if not sender:
-        await interaction.response.send_message(
-            "Анкета отправителя удалена.", ephemeral=True
-        )
+        await send_temporary(interaction, "Анкета отправителя удалена.", ephemeral=True)
         return
     result = await deliver_text(
         sender,
         f"↩️ Ответ от {current.nickname} ({platform_badge(current.platform)})\n\n{message}",
     )
-    await interaction.response.send_message(
+    await send_temporary(
+        interaction,
         "Ответ отправлен." if result.delivered else "Не удалось доставить ответ.",
         ephemeral=True,
     )
@@ -438,16 +544,14 @@ async def accept(interaction: discord.Interaction, request_id: int) -> None:
         return
     current = await platform_repository.get_profile("discord", interaction.user.id)
     if not current:
-        await interaction.response.send_message(
-            "Сначала создайте анкету.", ephemeral=True
-        )
+        await send_temporary(interaction, "Сначала создайте анкету.", ephemeral=True)
         return
     applicant, awarded = await platform_repository.accept_clan_application(
         request_id, current.id
     )
     if not applicant:
-        await interaction.response.send_message(
-            "Заявка не найдена или уже закрыта.", ephemeral=True
+        await send_temporary(
+            interaction, "Заявка не найдена или уже закрыта.", ephemeral=True
         )
         return
     if awarded:
@@ -455,8 +559,10 @@ async def accept(interaction: discord.Interaction, request_id: int) -> None:
             applicant,
             f"🏰 {current.nickname} принял вашу заявку в клан. Начислено 30 опыта.",
         )
-    await interaction.response.send_message(
-        "Заявка принята." if awarded else "Эта заявка уже была принята.", ephemeral=True
+    await send_temporary(
+        interaction,
+        "Заявка принята." if awarded else "Эта заявка уже была принята.",
+        ephemeral=True,
     )
 
 
@@ -469,9 +575,7 @@ async def rate(interaction: discord.Interaction, request_id: int) -> None:
     request = await platform_repository.get_contact_request(request_id)
     current = await platform_repository.get_profile("discord", interaction.user.id)
     if not request or not current or request.sender_profile_id != current.id:
-        await interaction.response.send_message(
-            "Приглашение не найдено.", ephemeral=True
-        )
+        await send_temporary(interaction, "Приглашение не найдено.", ephemeral=True)
         return
     await interaction.response.send_modal(RatingModal(request_id))
 
@@ -483,9 +587,9 @@ async def on_app_command_error(
     logger.exception("Discord command failed", exc_info=error)
     message = "Произошла ошибка. Попробуйте ещё раз или вернитесь в `/menu`."
     if interaction.response.is_done():
-        await interaction.followup.send(message, ephemeral=True)
+        await followup_temporary(interaction, message, ephemeral=True)
     else:
-        await interaction.response.send_message(message, ephemeral=True)
+        await send_temporary(interaction, message, ephemeral=True)
 
 
 async def main() -> None:

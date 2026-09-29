@@ -31,22 +31,13 @@ def profile_embed(profile: Profile, selected_game: str | None = None) -> discord
         description=profile.about or "О себе не указано",
         color=discord.Color.blurple(),
     )
-    embed.add_field(
-        name="Платформа", value=platform_badge(profile.platform), inline=True
-    )
-    embed.add_field(
-        name="Discord Tag" if profile.platform == "discord" else "Telegram тег",
-        value=profile.telegram_tag or "Не указан",
-        inline=True,
-    )
     embed.add_field(name="Возраст", value=str(profile.age or "Не указан"), inline=True)
     embed.add_field(name="Пол", value=profile.gender or "Не указан", inline=True)
     embed.add_field(
-        name="Уровень", value=f"{(profile.experience or 0) // 100 + 1} ⚡", inline=True
+        name="Контакт",
+        value=f"{platform_badge(profile.platform)} · {profile.telegram_tag or 'Не указан'}",
+        inline=False,
     )
-    embed.add_field(name="Вежливость", value=score(profile.polite), inline=True)
-    embed.add_field(name="Скилл", value=score(profile.skill), inline=True)
-    embed.add_field(name="Командная игра", value=score(profile.team_game), inline=True)
     embed.add_field(
         name="Игры и ранги", value="\n".join(game_lines) or "—", inline=False
     )
@@ -58,6 +49,14 @@ def profile_embed(profile: Profile, selected_game: str | None = None) -> discord
         value=", ".join(profile.convenient_time or []) or "—",
         inline=False,
     )
+    embed.add_field(
+        name="Репутация в TeamSeek",
+        value=f"Уровень {(profile.experience or 0) // 100 + 1} ⚡",
+        inline=False,
+    )
+    embed.add_field(name="Вежливость", value=score(profile.polite), inline=True)
+    embed.add_field(name="Скилл", value=score(profile.skill), inline=True)
+    embed.add_field(name="Командная игра", value=score(profile.team_game), inline=True)
     if selected_game:
         embed.set_footer(text=f"Поиск по игре: {selected_game}")
     return embed
